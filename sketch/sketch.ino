@@ -2,20 +2,33 @@
 int temperaturepin= 0;
 bool turnon = true;
 //this sets the ground pin to LOW and the input voltage pin to high
-void setup()
-{
-Serial.begin(9600);
 
-pinMode(11,OUTPUT);
-}
+#define switchButtonPin 2
+
+#define fanPwmPin 11
 
 #define celsiusRange (celsiusMax-celsiusMin)
-#define celsiusMin 17
-#define celsiusMax 34
+int celsiusMin;
+int celsiusMax;
+
+#define CMDLENGTH 6 //lihat parser di bawah
+
+void setup()
+{
+celsiusMin = 17;
+celsiusMax = 34;
+Serial.begin(9600);
+pinMode(switchButtonPin, INPUT);
+attachInterrupt(digitalPinToInterrupt(switchButtonPin), switchTurnOnOffButton, RISING);  
+pinMode(fanPwmPin ,OUTPUT);
+}
 
 //main loop
 void loop()
 {
+  if (Serial.available() >= CMDLENGTH){
+    handleSerialCommand();
+  }
   if (turnon){
     float humidity = getAverageHumidity(100);
     delay(100);
@@ -26,7 +39,7 @@ void loop()
     if (vKipas>255)vKipas=255;
     if (vKipas<0) vKipas=0;
     
-    analogWrite(11,vKipas);
+    analogWrite(fanPwmPin,vKipas);
         
     Serial.print(celsius);
     Serial.print(" degrees Celsius, ");
@@ -34,8 +47,18 @@ void loop()
     Serial.print(humidity);
     Serial.print(" % RH, vKipas: ");
     
-    Serial.println(vKipas);
+    Serial.print(vKipas*100/255);
+    Serial.println("%");
+    
+    Serial.println("");
+    Serial.println("vKipas based on temp, linear with maxtemp and mintemp, with humidity factor");
+    Serial.print("maxtemp: ");Serial.print(celsiusMax);
+    Serial.print(";mintemp: ");Serial.println(celsiusMin);
+    Serial.println("config: TMAX XX or TMIN XX, XX number");
+    Serial.println(" ");
     delay(1000);
+  }else{
+    analogWrite(fanPwmPin,0);
   }
 
 }
@@ -123,4 +146,57 @@ int getHumidity()
   if (humidity<0) return 0;
   
   return humidity;   
+}
+
+#define minPushButtonSignalDelay 100
+int lastSignalTime=0;
+void switchTurnOnOffButton(){
+  int signalTime = millis();
+  if (signalTime-lastSignalTime>minPushButtonSignalDelay)
+  {
+    if (turnon){
+      Serial.println("switch off");
+      turnon=false;
+    }else{
+      Serial.println("switch on");
+      turnon=true;
+    }
+  }
+  lastSignalTime=signalTime;
+}
+
+void handleSerialCommand(){
+  if (Serial.read()=='T'){
+    if (Serial.read()=='M'){
+      char a = Serial.read();
+      if (a =='A'){
+        if (Serial.read()=='X'){
+          if ( Serial.read()==' '){
+            char firstdigit = Serial.read();
+            if (firstdigit>='0'&&firstdigit<='9'){
+              char secondDigit = Serial.read();
+              if (secondDigit>='0'&&secondDigit<='9'){
+                celsiusMax = (firstdigit-'0')*10+(secondDigit-'0');
+              }
+            }
+            
+          }
+        }
+      }else if (a == 'I'){
+        if (Serial.read()=='N'){
+
+          if ( Serial.read()==' '){
+            char firstdigit = Serial.read();
+            if (firstdigit>='0'&&firstdigit<='9'){
+              char secondDigit = Serial.read();
+              if (secondDigit>='0'&&secondDigit<='9'){
+                celsiusMin = (firstdigit-'0')*10+(secondDigit-'0');
+              }
+            }
+            
+          }
+        }
+      }
+    }
+  }
 }
