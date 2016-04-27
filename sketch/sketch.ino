@@ -17,10 +17,12 @@ pinMode(11,OUTPUT);
 void loop()
 {
   if (turnon){
-    float celsius= readTempCelsius();
-    //float humidity = getAverageHumidity(100);
-    
-    int vKipas = (celsius - celsiusMin)*255/celsiusRange;
+    float humidity = getAverageHumidity(100);
+    delay(100);
+    float celsius= averageReadTempCelsius(100);
+
+  
+    int vKipas = (celsius - celsiusMin)*255/celsiusRange*humidity/100;
     if (vKipas>255)vKipas=255;
     if (vKipas<0) vKipas=0;
     
@@ -29,13 +31,22 @@ void loop()
     Serial.print(celsius);
     Serial.print(" degrees Celsius, ");
 
-    //Serial.print(humidity);
-    //Serial.print(" % RH, vKipas: ");
+    Serial.print(humidity);
+    Serial.print(" % RH, vKipas: ");
     
     Serial.println(vKipas);
     delay(1000);
   }
 
+}
+
+float averageReadTempCelsius(int n){
+  int sum=0;
+  for (int i=0;i<n;i++){
+    sum+=readTempCelsius();
+  }
+  return sum/n;
+  
 }
 
 float readTempCelsius(){
