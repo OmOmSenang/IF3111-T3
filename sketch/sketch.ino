@@ -2,11 +2,17 @@
 int temperaturepin= 0;
 bool turnon = true;
 //this sets the ground pin to LOW and the input voltage pin to high
+
+#define switchButtonPin 2
+
+#define fanPwmPin 11
+
 void setup()
 {
 Serial.begin(9600);
-
-pinMode(11,OUTPUT);
+pinMode(switchButtonPin, INPUT);
+attachInterrupt(digitalPinToInterrupt(switchButtonPin), switchTurnOnOffButton, RISING);  
+pinMode(fanPwmPin ,OUTPUT);
 }
 
 #define celsiusRange (celsiusMax-celsiusMin)
@@ -26,7 +32,7 @@ void loop()
     if (vKipas>255)vKipas=255;
     if (vKipas<0) vKipas=0;
     
-    analogWrite(11,vKipas);
+    analogWrite(fanPwmPin,vKipas);
         
     Serial.print(celsius);
     Serial.print(" degrees Celsius, ");
@@ -36,6 +42,8 @@ void loop()
     
     Serial.println(vKipas);
     delay(1000);
+  }else{
+    analogWrite(fanPwmPin,0);
   }
 
 }
@@ -124,3 +132,21 @@ int getHumidity()
   
   return humidity;   
 }
+
+#define minPushButtonSignalDelay 100
+int lastSignalTime=0;
+void switchTurnOnOffButton(){
+  int signalTime = millis();
+  if (signalTime-lastSignalTime>minPushButtonSignalDelay)
+  {
+    if (turnon){
+      Serial.println("switch off");
+      turnon=false;
+    }else{
+      Serial.println("switch on");
+      turnon=true;
+    }
+  }
+  lastSignalTime=signalTime;
+}
+
