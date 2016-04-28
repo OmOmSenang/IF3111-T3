@@ -5,6 +5,8 @@ bool turnon = true;
 
 #define switchButtonPin 2
 
+#define switchLightPin 10
+
 #define fanPwmPin 11
 
 #define celsiusRange (celsiusMax-celsiusMin)
@@ -15,22 +17,35 @@ int celsiusMax;
 
 void setup()
 {
+
 celsiusMin = 17;
 celsiusMax = 34;
 Serial.begin(9600);
 pinMode(switchButtonPin, INPUT);
+pinMode(switchLightPin, OUTPUT);
 attachInterrupt(digitalPinToInterrupt(switchButtonPin), switchTurnOnOffButton, RISING);  
 pinMode(fanPwmPin ,OUTPUT);
 setupSevenSegment();
 }
 
+/*
+  SerialEvent occurs whenever a new data comes in the
+ hardware serial RX.  This routine is run between each
+ time loop() runs, so using delay inside loop can delay
+ response.  Multiple bytes of data may be available.
+ */
+void serialEvent() {
+  while (Serial.available() >= CMDLENGTH){
+    handleSerialCommand();
+  }
+}
+
+
 //main loop
 void loop()
 {
-  if (Serial.available() >= CMDLENGTH){
-    handleSerialCommand();
-  }
   if (turnon){
+    digitalWrite(switchLightPin,HIGH);
     float humidity = getAverageHumidity(100);
     delay(100);
     float celsius= averageReadTempCelsius(100);
@@ -61,6 +76,7 @@ void loop()
     displayBilangan(celsius);
     delay(1000);
   }else{
+    digitalWrite(switchLightPin,LOW);
     analogWrite(fanPwmPin,0);
   }
 
@@ -160,8 +176,10 @@ void switchTurnOnOffButton(){
     if (turnon){
       Serial.println("switch off");
       turnon=false;
+      digitalWrite(switchLightPin,LOW);
     }else{
       Serial.println("switch on");
+      digitalWrite(switchLightPin,HIGH);
       turnon=true;
     }
   }
